@@ -575,9 +575,11 @@ comes from the reference register or a page fetched in the same run. Its finding
 and are not a certification statement. State between runs is kept on the `memory/mdr-compliance`
 branch.
 
-To run it in a repository: set the `COPILOT_GITHUB_TOKEN` secret (as for Repo Assist), make sure
-the `automation` and `mdr-compliance` labels exist, and enable "Allow GitHub Actions to create
-and approve pull requests" under Settings → Actions → General. To change its behaviour, edit
+To run it in a repository: set the `ANTHROPIC_API_KEY` secret (the agent runs on the Claude Code
+engine, billed to an Anthropic API key from console.anthropic.com; Repo Assist runs on Copilot and
+needs `COPILOT_GITHUB_TOKEN` instead), make sure the `automation` and `mdr-compliance` labels
+exist, and enable "Allow GitHub Actions to create and approve pull requests" under Settings →
+Actions → General (an organization-level policy must allow it first). To change its behaviour, edit
 the `.md` file, install the compiler once with `gh extension install github/gh-aw`, run
 `gh aw compile mdr-compliance`, and commit both the `.md` and the regenerated `.lock.yml`.
 
