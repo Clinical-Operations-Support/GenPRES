@@ -11,7 +11,13 @@ description: |
   scope or free-text instructions. It never merges: the human maintainer is the sole gatekeeper.
 
 on:
-  pull_request:
+  # pull_request_target rather than pull_request: gh-aw refuses to check out a PR branch when the
+  # repository itself is a fork (actions/setup/js/checkout_pr_branch.cjs), which is the case for
+  # every contributor fork of informedica/GenPRES. With pull_request_target the agent works on a
+  # trusted checkout of master and reads the PR diff through the GitHub tools; PR mode never
+  # builds or runs PR code (see "Pull request mode" below). The workflow definition is taken from
+  # master, so a change to this file takes effect on pull requests only after it is merged.
+  pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review]
     branches: [master]
   push:
@@ -158,9 +164,14 @@ relying on them.
 
 Determine the mode from the trigger: event `${{ github.event_name }}`.
 
-### Pull request mode (`pull_request`)
+### Pull request mode (`pull_request_target`)
 
 Pull request `#${{ github.event.pull_request.number }}`. Head SHA `${{ github.event.pull_request.head.sha }}`.
+
+The working copy is `master`, not the pull request branch. Read the change through the GitHub
+tools (`get_pull_request`, `get_pull_request_diff`, `get_pull_request_files`,
+`get_pull_request_status`) and read changed files at the head SHA with `get_file_contents`.
+Never check out, build or execute code from the pull request branch in this mode.
 
 1. If memory records a review for this exact head SHA, stop: nothing to do.
 2. Fetch the diff against `master` and the pull request description.

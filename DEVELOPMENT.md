@@ -542,7 +542,12 @@ What it does, per trigger:
 - **Pull request to `master`**: one advisory review (event `COMMENT`, never `REQUEST_CHANGES`),
   inline comments on the lines that carry a finding, and a check run named "MDR compliance" with
   conclusion `success` (no findings), `neutral` (findings) or `action_required` (a finding in the
-  Blocking category). It never reports `failure`; the maintainer decides what blocks.
+  Blocking category). It never reports `failure`; the maintainer decides what blocks. The trigger
+  is `pull_request_target`: the agent works on a checkout of `master` and reads the diff through
+  the GitHub API, because gh-aw refuses to check out a PR branch inside a repository that is
+  itself a fork, which every contributor fork of `informedica/GenPRES` is. Consequently the
+  workflow definition on `master` is the one that runs, so changes to the agent reach pull
+  requests only after they are merged.
 - **Push to `master`**: up to three draft pull requests titled `[MDR] …` on `mdr/<check>-<topic>`
   branches (labels `automation`, `mdr-compliance`), each stating the regulatory rationale with the
   clause and the link, and up to three `[MDR] …` issues for records that belong in the
