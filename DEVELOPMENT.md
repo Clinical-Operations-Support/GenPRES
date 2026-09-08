@@ -525,6 +525,47 @@ to publish a PR build and the Release solution build is not worth spending per b
 **One-time repo setup (admin)**: Settings → Pages → Build and deployment → Source = "GitHub
 Actions". Until that is set, the `deploy` job fails with "Pages site not found".
 
+### MDR Compliance Agent (GitHub Actions)
+
+GenPRES is clinical decision support software for medication prescribing and therefore medical
+device software under [Regulation (EU) 2017/745](https://eur-lex.europa.eu/eli/reg/2017/745/oj)
+(the MDR). `.github/workflows/mdr-compliance.md` is a [GitHub Agentic Workflow](https://github.github.com/gh-aw/)
+(the same mechanism as Repo Assist, compiled to `mdr-compliance.lock.yml`) that reviews every
+change against the software obligations the MDR imposes through Annex I and its harmonised
+standards (IEC 62304, ISO 14971, IEC 62366-1, IEC 82304-1) and MDCG guidance (2019-11 software
+qualification and classification, 2019-16 cybersecurity, 2020-3 significant changes). The check
+catalogue, the provisional IEC 62304 safety-class map and the reference register with the source
+links live in the workflow file itself, so they are versioned with the code.
+
+What it does, per trigger:
+
+- **Pull request to `master`**: one advisory review (event `COMMENT`, never `REQUEST_CHANGES`),
+  inline comments on the lines that carry a finding, and a check run named "MDR compliance" with
+  conclusion `success` (no findings), `neutral` (findings) or `action_required` (a finding in the
+  Blocking category). It never reports `failure`; the maintainer decides what blocks.
+- **Push to `master`**: up to three draft pull requests titled `[MDR] …` on `mdr/<check>-<topic>`
+  branches (labels `automation`, `mdr-compliance`), each stating the regulatory rationale with the
+  clause and the link, and up to three `[MDR] …` issues for records that belong in the
+  proprietary MDR documentation repository (risk file, SOUP list, usability file, change-control
+  record), which `docs/README.md` keeps out of this repository on purpose.
+- **Weekly on Monday, or manually from the Actions tab**: one area of an audit rota (SOUP
+  inventory, dose-calculation paths, order pipeline, rule-base ingress, the server DMZ, client
+  and user guides, process evidence). The `instructions` input runs an ad-hoc request instead.
+
+Constraints it works under: the script-only policy in `AGENTS.md` (executable changes to core
+`.fs` files are delivered as `.fsx` prototypes with a migration note); gh-aw's protected-files
+rule (a change to `.github/`, `AGENTS.md`, `CONTRIBUTING.md` and similar becomes a review issue
+instead of a pull request); every finding needs a file or commit plus a clause; every citation
+comes from the reference register or a page fetched in the same run. Its findings are advisory
+and are not a certification statement. State between runs is kept on the `memory/mdr-compliance`
+branch.
+
+To run it in a repository: set the `COPILOT_GITHUB_TOKEN` secret (as for Repo Assist), make sure
+the `automation` and `mdr-compliance` labels exist, and enable "Allow GitHub Actions to create
+and approve pull requests" under Settings → Actions → General. To change its behaviour, edit
+the `.md` file, install the compiler once with `gh extension install github/gh-aw`, run
+`gh aw compile mdr-compliance`, and commit both the `.md` and the regenerated `.lock.yml`.
+
 ### Release Automation (GitHub Actions)
 
 `.github/workflows/release.yml` runs [EasyBuild.ShipIt](https://github.com/easybuild-org/EasyBuild.ShipIt)

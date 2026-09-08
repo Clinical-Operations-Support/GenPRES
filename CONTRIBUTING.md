@@ -99,6 +99,18 @@ Contributors must explicitly disclose in their pull request when any code is vib
 
 Vibe-coded PRs will receive additional scrutiny during review, given GenPRES's status as medical device software where unvalidated code poses a patient safety risk.
 
+### Automated MDR Compliance Review
+
+Every pull request to `master` receives an advisory review from the MDR Compliance Agent
+(`.github/workflows/mdr-compliance.md`), which checks the change against the software obligations
+of the Medical Device Regulation and its harmonised standards and cites the clause and the public
+source for each finding. The review is a comment, never a blocking review: maintainers decide
+what has to be addressed. When a finding asks for a hazard analysis, a SOUP record or a user-guide
+update, answering it in the pull request description is usually enough; findings that belong in
+the MDR documentation repository are routed there as `[MDR]` issues. See
+[DEVELOPMENT.md](DEVELOPMENT.md#mdr-compliance-agent-github-actions) for what it checks and how
+it is configured.
+
 ## Community and Communication
 
 ### Slack Workspace
