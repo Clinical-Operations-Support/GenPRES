@@ -556,6 +556,16 @@ What it does, per trigger:
 - **Weekly on Monday, or manually from the Actions tab**: one area of an audit rota (SOUP
   inventory, dose-calculation paths, order pipeline, rule-base ingress, the server DMZ, client
   and user guides, process evidence). The `instructions` input runs an ad-hoc request instead.
+- **Baseline, manually with scope `all`**: a one-off review of the whole codebase against every
+  check. It opens no pull requests; it files a single `[MDR] Baseline gap assessment <date>`
+  issue with every finding, and stores the findings in the agent's memory so that the weekly
+  runs turn them into pull requests, highest category first. Run it once after the agent is
+  merged, and again after a large merge or a release:
+
+  ```bash
+  gh workflow run mdr-compliance.lock.yml -f scope=all
+  ```
+
 
 Constraints it works under: the script-only policy in `AGENTS.md` (executable changes to core
 `.fs` files are delivered as `.fsx` prototypes with a migration note); gh-aw's protected-files

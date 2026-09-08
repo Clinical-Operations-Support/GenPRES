@@ -26,7 +26,7 @@ on:
   workflow_dispatch:
     inputs:
       scope:
-        description: "Optional: a path, module or audit-rota area to audit (e.g. src/Informedica.GenSOLVER.Lib or SOUP)"
+        description: "Optional: a path, module or audit-rota area to audit (e.g. src/Informedica.GenSOLVER.Lib or SOUP); 'all' runs the whole-codebase baseline"
         required: false
         type: string
       instructions:
@@ -35,7 +35,7 @@ on:
         type: string
   reaction: "eyes"
 
-timeout-minutes: 45
+timeout-minutes: 90
 
 concurrency:
   job-discriminator: ${{ github.event.pull_request.number || github.run_id }}
@@ -206,14 +206,37 @@ Range `${{ github.event.before }}..${{ github.event.after }}`.
 
 ### Scheduled mode (`schedule`) and manual mode (`workflow_dispatch`)
 
-Scope input: "${{ github.event.inputs.scope }}" (empty means: pick from the audit rota).
+Scope input: "${{ github.event.inputs.scope }}" (empty means: pick from the audit rota; `all`
+or `baseline` means: **baseline mode**, below).
 Instructions input: "${{ github.event.inputs.instructions }}" (non-empty means: **command mode**, below).
 
 1. Read the audit rota in memory: a cursor over the areas listed under **Audit rota**. Audit the
    next area, or the given scope. One area per run.
-2. Run the catalogue checks that apply to the whole area, not just to a diff.
+2. First drain `openFindings` in memory that have neither a pull request nor an issue yet,
+   highest category first, up to the per-run caps below. These are usually left over from the
+   baseline run. Then run the catalogue checks that apply to the whole area, not just to a diff.
 3. Open at most three remediation pull requests and at most three issues, as in push mode.
 4. Advance the cursor and update memory.
+
+### Baseline mode (`workflow_dispatch` with scope `all`)
+
+The one-off review of the whole codebase, run once before the first weekly cycle, and again
+after a large merge or a release. It produces the gap assessment the weekly runs then work off.
+
+1. Audit **every** area of the audit rota, in order, running each catalogue check against the
+   whole area. Read the code, the tests, the documents and the last 30 merged pull requests
+   (`MDR-01`, `MDR-12`); do not sample. Also read `docs/security/security-baseline.md` and
+   `docs/security/2026-04-10-security-review.md` and treat items resolved there as closed.
+2. Open **no** remediation pull requests in this mode. The purpose is the inventory, not the fix.
+3. Create **one** issue titled `[MDR] Baseline gap assessment <YYYY-MM-DD>` using the
+   **Baseline issue template**. Keep the body under 60,000 characters: one line per finding,
+   grouped by check ID, highest category first. When you must cut, cut Advisory findings first and
+   say how many were cut; the full list lives in memory.
+4. Record every finding in `openFindings` in memory with `prNumber` and `issueNumber` empty,
+   and record the issue number under `issues` with `kind: baseline`. Do not advance the rota
+   cursor. Set `baseline: { date, issueNumber, findingCount }` in `state.json`.
+5. If a previous baseline issue is still open, do not create a second one: post one comment on
+   it with the findings that are new since that baseline, and update memory.
 
 ### Command mode (`workflow_dispatch` with `instructions`)
 
@@ -374,6 +397,46 @@ Sources:
 - Verified by: <tests, build, manual reading>.
 ```
 
+### Baseline issue template
+
+```markdown
+🤖 *MDR Compliance Agent: automated, advisory review. Findings are not a certification statement.*
+
+## Baseline gap assessment, <date>, commit <sha>
+
+Whole-codebase review against the check catalogue in `.github/workflows/mdr-compliance.md`.
+Findings are inputs to the maintainer's own gap analysis, not a certification statement.
+
+## Summary
+| Category | Count |
+| --- | --- |
+| Blocking | … |
+| Required | … |
+| Advisory | … |
+
+## Provisional software item classification (IEC 62304 §4.3)
+| Software item | Provisional class | Reason |
+| --- | --- | --- |
+| … | … | … |
+
+## Findings
+### MDR-06 SOUP
+| # | Category | Where | Observation | Basis |
+| --- | --- | --- | --- | --- |
+| B-001 | Blocking | `paket.lock` | … | IEC 62304 §8.1.2 [R9](url) |
+
+*(one subsection per check ID that has findings; omit checks without findings)*
+
+## For the MDR documentation repository
+- …
+
+## Suggested order of work
+1. … (Blocking items first; group the ones that become one pull request)
+
+## Sources
+- [R1] … — <url>
+```
+
 ### Documentation issue template
 
 ```markdown
@@ -431,6 +494,7 @@ Keep `state.json` with:
 - `remediationPRs` and `issues`: numbers, titles, dates, and whether they are still open when
   last checked.
 - `rotaCursor`: index into the audit rota, and the date of the last scheduled run.
+- `baseline`: date, issue number and finding count of the last whole-codebase baseline run.
 
 Keep `notes.md` for anything a future run should know that does not fit the schema (for example
 a maintainer comment that a finding is accepted as residual risk, with the link).
